@@ -60,9 +60,57 @@
                         Change
                     </button>
                 </div>
+
                 <div class="flex-1 border border-green-500 m-1 p-3">
+                    <form @submit.prevent="setVolume">
+                        <fieldset>
+                            <legend class="text-sm font-semibold">Advanced Volume Control</legend>
+                            <div class="grid grid-cols-5 gap-2 mt-5 border-2 p-2">
+                                <!-- Shuffle the array of volume levels before rendering them -->
+                                <label v-for="level in shuffledVolumeLevels" :key="level" class="flex items-center space-x-2 text-xs">
+                                    <input type="radio" name="volume" :value="level * 0.1" v-model="selectedVolume">
+                                    <span>{{ level }}</span>
+                                </label>
+                            </div>
+                
+                            <div class="flex border-2 p-2 mt-2 space-x-2">
+                                <button type="button" class="bg-blue-500 text-white py-1 px-4 rounded" @click="mute">Mute</button>
+                                <button type="submit" class="bg-blue-500 text-white py-1 px-4 rounded">Set Volume</button>
+                            </div>
+                        </fieldset>
+                    </form>
                 </div>
-                <div class="flex-1 border border-purple-500 m-1 p-3"></div>
+
+                <div class="flex-1 border border-purple-500 m-1 p-3">
+                    <div class="slider-container relative bg-gray-200 h-8 rounded-full overflow-hidden">
+                      <div class="slider-track bg-gray-500 h-full"></div>
+                      <div
+                        class="slider-thumb bg-orange-500 h-full w-8 absolute top-0"
+                        ref="sliderThumb"
+                        :style="{ left: `${sliderPosition}%` }"
+                      ></div>
+                    </div>
+                </div>
+
+
+                <div class="flex-1 border border-purple-500 m-1 p-3">
+                    <!-- Container for the filling element -->
+                    <div class="relative w-full h-8 bg-gray-200 rounded-full overflow-hidden">
+                      <!-- Filling element that adjusts dynamically -->
+                      <div class="filling-element bg-blue-500 h-full" :style="{ width: `${fillingWidth}%` }"></div>
+                    </div>
+                    
+                    <!-- Up and Down buttons -->
+                    <div class="flex justify-between mt-4">
+                      <button @click="increaseFilling" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                        Increase
+                      </button>
+                      <button @click="decreaseFilling" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                        Decrease
+                      </button>
+                    </div>
+                </div>
+
             </div>
 
         </main>
@@ -89,9 +137,33 @@ data() {
     minVolume: 0, // Min volume value
     volumeStep: 0.1, // Volume step for each adjustment
     volumeLevel: 10, // Initial volume level (example)
-    currentTime: 0 // Current playback position
+    currentTime: 0, // Current playback position
+    selectedVolume: 1.0, // Selected volume from radio buttons
+    volumeLevels: Array.from({ length: 10 }, (_, i) => i + 1), // Create array [1, 2, ..., 10]
+    sliderMin: 0, // Min value of the slider
+    sliderMax: 100, // Max value of the slider
+    sliderValue: 0, // Current value of the slider
+    sliderDirection: 'forward', // Direction of movement ('forward' or 'backward')
+    sliderSpeed: 1, // Speed of movement (adjust as needed)
+    sliderInterval: null, // Interval object to manage movement
+    fillingWidth: 50, // Initial width of the filling element (in percentage)
+    fillingStep: 5, // Amount to increase or decrease the filling width
+    minFillingWidth: 0, // Min width of the filling element
+    maxFillingWidth: 100 // Max width of the filling element
+
     };
 },
+computed:{
+    shuffledVolumeLevels() {
+      return this.volumeLevels.sort(() => Math.random() - 0.5);
+    },
+    sliderPosition() {
+      return (this.sliderValue / this.sliderMax) * 100;
+    }
+},
+mounted() {
+    this.startSlider();
+  },
 methods: {
     play(song) {
     if (typeof song.src !== 'undefined') {
@@ -155,28 +227,89 @@ methods: {
     this.player.currentTime = this.currentTime;
     },
     randomChange() {
-    const newVolume = Math.random() * (this.maxVolume - this.minVolume) + this.minVolume;
+        const newVolume = Math.random() * (this.maxVolume - this.minVolume) + this.minVolume;
 
         // Ensure newVolume is within valid range (0 to 1)
         if (newVolume >= this.minVolume && newVolume <= this.maxVolume) {
             this.player.volume = newVolume;
-            this.volumeLevel = Math.round(newVolume * 10); // Example: Convert to 10-level scale
+            this.volumeLevel = Math.round(newVolume * 10); // Convert to 10-level scale
+            this.selectedVolume = newVolume; // Update selectedVolume
             console.log(`Volume changed randomly to ${this.volumeLevel}/10`);
         } else {
             console.warn('Random volume value out of range.');
         }
+    },
+    setVolume() {
+        // Set the player's volume to the selected volume from the radio buttons
+        this.player.volume = this.selectedVolume;
+        this.volumeLevel = Math.round(this.selectedVolume * 10); // Update volumeLevel
+        console.log(`Volume set to ${this.volumeLevel}/10`);
+    },
+    mute() {
+        this.player.volume = this.minVolume;
+        this.volumeLevel = 0;
+        this.selectedVolume = this.minVolume; // Update selectedVolume
+        console.log(`Volume muted`);
+    },
+    sliderPosition() {
+      return (this.sliderValue / this.sliderMax) * 100;
+    },
+    startSlider() {
+      this.sliderInterval = setInterval(() => {
+        if (this.sliderDirection === 'forward') {
+          this.sliderValue += this.sliderSpeed;
+          if (this.sliderValue >= this.sliderMax) {
+            this.sliderValue = this.sliderMax;
+            this.sliderDirection = 'backward';
+          }
+        } else {
+          this.sliderValue -= this.sliderSpeed;
+          if (this.sliderValue <= this.sliderMin) {
+            this.sliderValue = this.sliderMin;
+            this.sliderDirection = 'forward';
+          }
+        }
+        this.updateSliderPosition();
+      }, 50);
+    },
+    updateSliderPosition() {
+      const newPosition = (this.sliderValue / this.sliderMax) * 100;
+      this.$refs.sliderThumb.style.left = `${newPosition}%`;
+
+      // Adjust volume or any action based on slider value here
+    //   const newVolume = this.sliderValue / this.sliderMax;
+    //   this.player.volume = newVolume;
+    //   this.volumeLevel = Math.round(newVolume * 10); // Update volume level display
+    },
+    pauseSlider() {
+      clearInterval(this.sliderInterval);
+      this.sliderInterval = null;
+    },
+    resumeSlider() {
+      if (!this.sliderInterval) {
+        this.startSlider();
+      }
+    },
+    increaseFilling() {
+      this.fillingWidth = Math.min(this.fillingWidth + this.fillingStep, this.maxFillingWidth);
+    },
+    decreaseFilling() {
+      this.fillingWidth = Math.max(this.fillingWidth - this.fillingStep, this.minFillingWidth);
     }
 },
-created() {
-    this.current = this.songs[this.index];
-    this.player.src = this.current.src;
+    created() {
+        this.current = this.songs[this.index];
+        this.player.src = this.current.src;
 
-    // Update current time as audio progresses
-    this.player.addEventListener('timeupdate', () => {
-    this.currentTime = this.player.currentTime;
-    });
+        // Update current time as audio progresses
+        this.player.addEventListener('timeupdate', () => {
+        this.currentTime = this.player.currentTime;
+        });
 
-    this.player.volume = .5; // Set initial volume (optional)
-}
+        this.player.volume = .5; // Set initial volume (optional)
+    },
+    beforeDestroy() {
+        clearInterval(this.sliderInterval);
+    }
 };
 </script>
