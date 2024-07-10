@@ -1,7 +1,8 @@
 <template>
     <div id="app">
-        <header class="bg-gray-900 text-white py-8">
-            <h1 class="text-2xl flex items-center justify-center absolute right-20 top-6">BAD UX DESIGN</h1>
+        <header class="bg-gray-900 text-white h-24 relative">
+            <h1 class="text-2xl flex items-center justify-center absolute right-20 top-8">BAD UX DESIGN</h1>
+            <h1 class="text-md flex items-center justify-center absolute right-10 top-14">initially muted</h1>
         </header>
         
         <main class="max-w-screen-md mx-auto px-4">
@@ -57,7 +58,7 @@
                     </h2>
 
                     <button class="mt-2 p-1 border border-black bg-gray-200" @click="randomChange">
-                        Change
+                        Random Change
                     </button>
                 </div>
 
@@ -68,7 +69,7 @@
                             <div class="grid grid-cols-5 gap-2 mt-5 border-2 p-2">
                                 <!-- Shuffle the array of volume levels before rendering them -->
                                 <label v-for="level in shuffledVolumeLevels" :key="level" class="flex items-center space-x-2 text-xs">
-                                    <input type="radio" name="volume" :value="level * 0.1" v-model="selectedVolume">
+                                    <input type="radio" name="volume" :value="level * 1" v-model="selectedVolume">
                                     <span>{{ level }}</span>
                                 </label>
                             </div>
@@ -82,35 +83,50 @@
                 </div>
 
                 <div class="flex-1 border border-purple-500 m-1 p-3">
-                    <div class="slider-container relative bg-gray-200 h-8 rounded-full overflow-hidden">
-                      <div class="slider-track bg-gray-500 h-full"></div>
-                      <div
+                    <!-- Container for the filling element -->
+                    <div class="flex items-center justify-center">
+                    <div class="relative h-28 w-8 bg-gray-200 rounded-full overflow-hidden">
+                        <!-- Filling element that adjusts dynamically -->
+                        <div class="filling-element bg-blue-500 absolute bottom-0 w-full" :style="{ height: `${fillingHeight}%` }"></div>
+                    </div>
+                    </div>
+                
+                    <div class="slider-container relative bg-gray-200 h-8 rounded-full overflow-hidden mt-5">
+                    <div class="slider-track bg-gray-500 h-full"></div>
+                    <div
                         class="slider-thumb bg-orange-500 h-full w-8 absolute top-0"
                         ref="sliderThumb"
                         :style="{ left: `${sliderPosition}%` }"
-                      ></div>
+                    ></div>
                     </div>
-                </div>
-
-
-                <div class="flex-1 border border-purple-500 m-1 p-3">
-                    <!-- Container for the filling element -->
-                    <div class="relative w-full h-8 bg-gray-200 rounded-full overflow-hidden">
-                      <!-- Filling element that adjusts dynamically -->
-                      <div class="filling-element bg-blue-500 h-full" :style="{ width: `${fillingWidth}%` }"></div>
+                
+                    <div class="flex justify-between">
+                    <div class="flex justify-center items-center border-2 bg-red-400">
+                        miss
                     </div>
-                    
+                
+                    <button @click="stopSlider" class="flex justify-center items-center border-2 bg-blue-400">
+                        stop
+                    </button>
+                
+                    <div class="flex justify-center items-center border-2 bg-green-400">
+                        hit
+                    </div>
+                    </div>
+                
                     <!-- Up and Down buttons -->
-                    <div class="flex justify-between mt-4">
-                      <button @click="increaseFilling" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                        Increase
-                      </button>
-                      <button @click="decreaseFilling" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                    <!-- <div class="flex justify-between mt-4">
+                    <button @click="decreaseFilling" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
                         Decrease
-                      </button>
-                    </div>
+                    </button>
+                    <button @click="increaseFilling" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                        Increase
+                    </button>
+                    </div> -->
                 </div>
 
+                <!-- <div class="flex-1 border border-purple-500 m-1 p-3">
+                </div> -->
             </div>
 
         </main>
@@ -119,137 +135,144 @@
 
 <script>
 export default {
-name: 'app',
-data() {
+  name: 'app',
+  data() {
     return {
-    current: {},
-    index: 0,
-    isPlaying: false,
-    songs: [
+      current: {},
+      index: 0,
+      isPlaying: false,
+      songs: [
         {
-        title: 'NVMD',
-        artist: 'ASDFSADFW',
-        src: '/NVMD.mp3' // Adjust the path relative to the public directory
+          title: 'NVMD',
+          artist: 'ASDFSADFW',
+          src: '/NVMD.mp3' // Adjust the path relative to the public directory
         }
-    ],
-    player: new Audio(),
-    maxVolume: 1, // Max volume value
-    minVolume: 0, // Min volume value
-    volumeStep: 0.1, // Volume step for each adjustment
-    volumeLevel: 10, // Initial volume level (example)
-    currentTime: 0, // Current playback position
-    selectedVolume: 1.0, // Selected volume from radio buttons
-    volumeLevels: Array.from({ length: 10 }, (_, i) => i + 1), // Create array [1, 2, ..., 10]
-    sliderMin: 0, // Min value of the slider
-    sliderMax: 100, // Max value of the slider
-    sliderValue: 0, // Current value of the slider
-    sliderDirection: 'forward', // Direction of movement ('forward' or 'backward')
-    sliderSpeed: 1, // Speed of movement (adjust as needed)
-    sliderInterval: null, // Interval object to manage movement
-    fillingWidth: 50, // Initial width of the filling element (in percentage)
-    fillingStep: 5, // Amount to increase or decrease the filling width
-    minFillingWidth: 0, // Min width of the filling element
-    maxFillingWidth: 100 // Max width of the filling element
-
+      ],
+      player: new Audio(),
+      maxVolume: 10, // Max volume value
+      minVolume: 0, // Min volume value
+      volumeStep: 1, // Volume step for each adjustment
+      volumeLevel: 0, // Initial volume level (example)
+      currentTime: 0, // Current playback position
+      selectedVolume: 0, // Selected volume from radio buttons
+      volumeLevels: Array.from({ length: 10 }, (_, i) => i + 1), // Create array [1, 2, ..., 10]
+      sliderMin: 0, // Min value of the slider
+      sliderMax: 100, // Max value of the slider
+      sliderValue: 0, // Current value of the slider
+      sliderDirection: 'forward', // Direction of movement ('forward' or 'backward')
+      sliderSpeed: 10, // Speed of movement (adjust as needed)
+      sliderInterval: null, // Interval object to manage movement
+      fillingHeight: 0, // Initial width of the filling element (in percentage)
+      fillingStep: 10, // Amount to increase or decrease the filling width
+      minfillingHeight: 0, // Min width of the filling element
+      maxfillingHeight: 100 // Max width of the filling element
     };
-},
-computed:{
+  },
+  computed: {
     shuffledVolumeLevels() {
       return this.volumeLevels.sort(() => Math.random() - 0.5);
     },
     sliderPosition() {
       return (this.sliderValue / this.sliderMax) * 100;
     }
-},
-mounted() {
+  },
+  mounted() {
     this.startSlider();
   },
-methods: {
+  methods: {
     play(song) {
-    if (typeof song.src !== 'undefined') {
+      if (typeof song.src !== 'undefined') {
         this.current = song;
         this.player.src = this.current.src;
-    }
+      }
 
-    this.player.play();
-    this.player.addEventListener('ended', () => {
+      this.player.play();
+      this.player.addEventListener('ended', () => {
         this.index++;
         if (this.index > this.songs.length - 1) {
-        this.index = 0;
+          this.index = 0;
         }
 
         this.current = this.songs[this.index];
         this.play(this.current);
-    });
-    this.isPlaying = true;
+      });
+      this.isPlaying = true;
     },
     pause() {
-    this.player.pause();
-    this.isPlaying = false;
+      this.player.pause();
+      this.isPlaying = false;
     },
     next() {
-    this.index++;
-    if (this.index > this.songs.length - 1) {
+      this.index++;
+      if (this.index > this.songs.length - 1) {
         this.index = 0;
-    }
+      }
 
-    this.current = this.songs[this.index];
-    this.play(this.current);
+      this.current = this.songs[this.index];
+      this.play(this.current);
     },
     prev() {
-    this.index--;
-    if (this.index < 0) {
+      this.index--;
+      if (this.index < 0) {
         this.index = this.songs.length - 1;
-    }
+      }
 
-    this.current = this.songs[this.index];
-    this.play(this.current);
+      this.current = this.songs[this.index];
+      this.play(this.current);
     },
     adjustVolume(direction) {
-    let newVolume = this.player.volume;
+      let newVolume = this.volumeLevel;
 
-    if (direction === 'up') {
-        newVolume = Math.min(this.player.volume + this.volumeStep, this.maxVolume);
-    } else if (direction === 'down') {
-        newVolume = Math.max(this.player.volume - this.volumeStep, this.minVolume);
-    }
+      if (direction === 'up') {
+        newVolume = Math.min(this.volumeLevel + this.volumeStep, this.maxVolume);
+      } else if (direction === 'down') {
+        newVolume = Math.max(this.volumeLevel - this.volumeStep, this.minVolume);
+      }
 
-    // Ensure newVolume is within valid range (0 to 1)
-    if (newVolume >= this.minVolume && newVolume <= this.maxVolume) {
-        this.player.volume = newVolume;
-        this.volumeLevel = Math.round(newVolume * 10); // Example: Convert to 10-level scale
+      // Ensure newVolume is within valid range (0 to 10)
+      if (newVolume >= this.minVolume && newVolume <= this.maxVolume) {
+        this.player.volume = newVolume / 10;
+        this.volumeLevel = newVolume; // Example: Convert to 10-level scale
         console.log(`Volume adjusted to ${this.volumeLevel}/10`);
-    } else {
+      } else {
         console.warn('Volume value out of range.');
-    }
+      }
     },
     seekTo() {
-    this.player.currentTime = this.currentTime;
+      this.player.currentTime = this.currentTime;
     },
     randomChange() {
-        const newVolume = Math.random() * (this.maxVolume - this.minVolume) + this.minVolume;
+      const newVolume = Math.floor(Math.random() * (this.maxVolume - this.minVolume + 1)) + this.minVolume;
 
-        // Ensure newVolume is within valid range (0 to 1)
-        if (newVolume >= this.minVolume && newVolume <= this.maxVolume) {
-            this.player.volume = newVolume;
-            this.volumeLevel = Math.round(newVolume * 10); // Convert to 10-level scale
-            this.selectedVolume = newVolume; // Update selectedVolume
-            console.log(`Volume changed randomly to ${this.volumeLevel}/10`);
-        } else {
-            console.warn('Random volume value out of range.');
+      // Ensure newVolume is within valid range (0 to 10)
+      if (newVolume >= this.minVolume && newVolume <= this.maxVolume) {
+        this.player.volume = newVolume / 10;
+        this.volumeLevel = newVolume; // Convert to 10-level scale
+        this.selectedVolume = newVolume; // Update selectedVolume
+        console.log(`Volume changed randomly to ${this.volumeLevel}/10`);
+
+        // Force volume to 0 if newVolume is 0
+        if (newVolume === 0) {
+          this.player.volume = 0;
+          console.log('Volume forced to 0');
         }
+
+        console.log(`Actual player volume: ${this.player.volume}`);
+      } else {
+        console.warn('Random volume value out of range.');
+      }
     },
     setVolume() {
-        // Set the player's volume to the selected volume from the radio buttons
-        this.player.volume = this.selectedVolume;
-        this.volumeLevel = Math.round(this.selectedVolume * 10); // Update volumeLevel
-        console.log(`Volume set to ${this.volumeLevel}/10`);
+      // Set the player's volume to the selected volume from the radio buttons
+      this.player.volume = this.selectedVolume / 10;
+      this.volumeLevel = this.selectedVolume; // Update volumeLevel
+      console.log(`Volume set to ${this.volumeLevel}/10`);
     },
     mute() {
-        this.player.volume = this.minVolume;
-        this.volumeLevel = 0;
-        this.selectedVolume = this.minVolume; // Update selectedVolume
-        console.log(`Volume muted`);
+      this.player.volume = this.minVolume;
+      this.volumeLevel = 0;
+      this.selectedVolume = this.minVolume; // Update selectedVolume
+      console.log(`Volume muted`);
     },
     sliderPosition() {
       return (this.sliderValue / this.sliderMax) * 100;
@@ -277,9 +300,9 @@ methods: {
       this.$refs.sliderThumb.style.left = `${newPosition}%`;
 
       // Adjust volume or any action based on slider value here
-    //   const newVolume = this.sliderValue / this.sliderMax;
-    //   this.player.volume = newVolume;
-    //   this.volumeLevel = Math.round(newVolume * 10); // Update volume level display
+      // const newVolume = this.sliderValue / this.sliderMax;
+      // this.player.volume = newVolume;
+      // this.volumeLevel = Math.round(newVolume * 10); // Update volume level display
     },
     pauseSlider() {
       clearInterval(this.sliderInterval);
@@ -291,25 +314,34 @@ methods: {
       }
     },
     increaseFilling() {
-      this.fillingWidth = Math.min(this.fillingWidth + this.fillingStep, this.maxFillingWidth);
+      this.fillingHeight = Math.min(this.fillingHeight + this.fillingStep, this.maxfillingHeight);
     },
     decreaseFilling() {
-      this.fillingWidth = Math.max(this.fillingWidth - this.fillingStep, this.minFillingWidth);
-    }
-},
-    created() {
-        this.current = this.songs[this.index];
-        this.player.src = this.current.src;
-
-        // Update current time as audio progresses
-        this.player.addEventListener('timeupdate', () => {
-        this.currentTime = this.player.currentTime;
-        });
-
-        this.player.volume = .5; // Set initial volume (optional)
+      this.fillingHeight = Math.max(this.fillingHeight - this.fillingStep, this.minfillingHeight);
     },
-    beforeDestroy() {
-        clearInterval(this.sliderInterval);
+    stopSlider() {
+        const position = this.sliderPosition;
+        if (position >= 40 && position <= 60) {
+            this.increaseFilling();
+            this.volumeLevel = Math.min(this.volumeLevel + this.volumeStep, this.maxVolume); // Increment volumeLevel
+            this.player.volume = this.volumeLevel / 10; // Sync player volume with volumeLevel
+            console.log('Volume adjusted to:', this.volumeLevel);
+        }
     }
+  },
+  created() {
+    this.current = this.songs[this.index];
+    this.player.src = this.current.src;
+
+    // Update current time as audio progresses
+    this.player.addEventListener('timeupdate', () => {
+      this.currentTime = this.player.currentTime;
+    });
+
+    this.player.volume = 0; // Set initial volume (optional)
+  },
+  beforeDestroy() {
+    clearInterval(this.sliderInterval);
+  }
 };
 </script>
